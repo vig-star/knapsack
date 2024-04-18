@@ -1,4 +1,5 @@
 import argparse
+import time
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-inst", "--instance", help="Instance", dest="instance")
@@ -73,7 +74,8 @@ def main():
         exit()
     
     items, W = read(args.instance)
-
+    
+    start = time.time()
     if args.algorithm == "BnB":
         selected, maximum = BnB(items, W)
     elif args.algorithm == "Approx":
@@ -82,9 +84,11 @@ def main():
         selected, maximum = LS1(items, W)
     elif args.algorithm == "LS2":
         selected, maximum = LS2(items, W)
+    end = time.time()
     
     print(selected)
     print(maximum)
+    print("Execution Time (seconds): " + str(end - start))
     
     write(selected, maximum)
 
