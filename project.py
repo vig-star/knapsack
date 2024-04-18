@@ -32,13 +32,13 @@ def write(args, selected, maximum):
         first = args.instance.find("/") + 1
         if first < 0:
             first = 0
-        file = open("./output/solution" + args.instance[first:] + "_" + args.algorithm + "_" + str(args.time) + ".sol", "w")
+        file = open("./output/solution/" + args.instance[first:] + "_" + args.algorithm + "_" + str(args.time) + ".sol", "w")
     # create output file in output/solution for non-deterministic algorithms like BnB/Approx   
     else:
         first = args.instance.find("/") + 1
         if first < 0:
             first = 0
-        file = open("./output/solution" + args.instance[first:] + "_" + args.algorithm + "_" + str(args.time) + "_" + str(args.seed) + ".sol", "w")
+        file = open("./output/solution/" + args.instance[first:] + "_" + args.algorithm + "_" + str(args.time) + "_" + str(args.seed) + ".sol", "w")
     
     # write quality (maximum value), then the items selected
     file.write(str(maximum) + "\n")
@@ -48,10 +48,10 @@ def write(args, selected, maximum):
         else:
             file.write(str(selected[i]) + "\n")
     
-def BnB(items, W):
+def BnB(items, W, startTime, cutoffTime):
     return None, None
 
-def Approx(items, W):
+def Approx(items, W, startTime, cutoffTime):
     L = [None for i in range(len(items))]
 
     for i in range(len(items)):
@@ -71,6 +71,9 @@ def Approx(items, W):
             total_weight += L[i][3]
             v_tot_X += L[i][2]
             i += 1
+        # stop if cutoff time passed
+        if (time.time() - startTime) >= cutoffTime:
+            break
     
     if i == len(items):
         return indices, v_tot_X
@@ -84,10 +87,10 @@ def Approx(items, W):
         else:
             return indices, v_tot_X
 
-def LS1(items, W, startTime):
+def LS1(items, W, startTime, cutoffTime):
     return None, None
 
-def LS2(items, W):
+def LS2(items, W, startTime, cutoffTime):
     return None, None
 
 def main():
@@ -100,6 +103,9 @@ def main():
         exit()
     if args.instance is None:
         print("Enter a valid instance")
+        exit()
+    if args.time is None:
+        print("Enter a valid cutoff time")
         exit()
     if args.algorithm not in set(["BnB", "Approx", "LS1", "LS2"]):
         print("You need to enter a valid algorithm of choice: BnB, Approx, LS1, LS2!")
@@ -125,18 +131,21 @@ def main():
         print("Error reading weight from instance")
         exit()
 
-
+    # initialize start and cutoff time
     start = time.time()
+    cutoff = float(args.time)
 
+    # call algorithms based on input and pass items, W, start and cutoff
     if args.algorithm == "BnB":
-        selected, maximum = BnB(items, W)
+        selected, maximum = BnB(items, W, start, cutoff)
     elif args.algorithm == "Approx":
-        selected, maximum = Approx(items, W)
+        selected, maximum = Approx(items, W, start, cutoff)
     elif args.algorithm == "LS1":
-        selected, maximum = LS1(items, W, start)
+        selected, maximum = LS1(items, W, start, cutoff)
     elif args.algorithm == "LS2":
-        selected, maximum = LS2(items, W)
-
+        selected, maximum = LS2(items, W, start, cutoff)
+    
+    # calculate total time for algorithm to end
     end = time.time()
     
     # print outputs and execution time before writing output file
@@ -145,7 +154,12 @@ def main():
     print("Execution Time (seconds): " + str(end - start))
     
     # call write function to write algorithm output
-    write(args, selected, int(maximum))
+    try:
+        write(args, selected, int(maximum))
+    except Exception as e:
+        print("Error writing solution: ", e)
+        exit()
+    
 
 
 if __name__ == "__main__":
