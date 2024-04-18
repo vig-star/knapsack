@@ -1,4 +1,5 @@
 import argparse
+import time
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-inst", "--instance", help="Instance", dest="instance")
@@ -10,7 +11,7 @@ def read(filepath):
     W = None
     items = []
 
-    with open(filepath) as file:
+    with open("./DATA/DATASET/" + filepath) as file:
         for i, line in enumerate(file):
             line = line.strip().split()
 
@@ -21,9 +22,22 @@ def read(filepath):
     
     return items, W
 
-def write(selected, maximum):
-    pass
+def write(args, selected, maximum):
+    if args.algorithm == "Approx":
+        first = args.instance.find("/") + 1
 
+        if first < 0:
+            first = 0
+            
+        file = open(args.instance[first:] + "_" + args.algorithm + "_" + str(args.time) + ".sol", "w")
+    
+    file.write(str(maximum) + "\n")
+    for i in range(len(selected)):
+        if i == len(selected) - 1:
+            file.write(str(selected[i]))
+        else:
+            file.write(str(selected[i]) + "\n")
+    
 def BnB(items, W):
     return None, None
 
@@ -73,7 +87,8 @@ def main():
         exit()
     
     items, W = read(args.instance)
-
+    
+    start = time.time()
     if args.algorithm == "BnB":
         selected, maximum = BnB(items, W)
     elif args.algorithm == "Approx":
@@ -82,11 +97,13 @@ def main():
         selected, maximum = LS1(items, W)
     elif args.algorithm == "LS2":
         selected, maximum = LS2(items, W)
+    end = time.time()
     
     print(selected)
     print(maximum)
+    print("Execution Time (seconds): " + str(end - start))
     
-    write(selected, maximum)
+    write(args, selected, int(maximum))
 
 
 if __name__ == "__main__":
