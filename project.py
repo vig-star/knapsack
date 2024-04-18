@@ -22,11 +22,16 @@ def read(filepath):
     
     return items, W
 
-def write(args, selected):
+def write(args, selected, maximum):
     if args.algorithm == "Approx":
-        first = args.instance.index("/") + 1
+        first = args.instance.find("/") + 1
+
+        if first < 0:
+            first = 0
+            
         file = open(args.instance[first:] + "_" + args.algorithm + "_" + str(args.time) + ".sol", "w")
     
+    file.write(str(maximum) + "\n")
     for i in range(len(selected)):
         if i == len(selected) - 1:
             file.write(str(selected[i]))
@@ -98,7 +103,7 @@ def main():
     print(maximum)
     print("Execution Time (seconds): " + str(end - start))
     
-    write(args, selected)
+    write(args, selected, int(maximum))
 
 
 if __name__ == "__main__":
