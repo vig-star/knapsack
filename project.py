@@ -1,3 +1,9 @@
+'''
+This file consists of all the code. 
+It takes in the command line input and calls the implemented functions as desired based on the parameters.
+Written by Vignesh Sreedhar, Sai Manchikalapati, and Pranav Sreedhar.
+'''
+
 import argparse
 import time
 import random
@@ -19,10 +25,10 @@ def read(filepath):
 
             if i == 0:
                 # extract weight limit
-                W = int(line[1])
+                W = float(line[1])
             else:
                 # each item in items is a tuple of value and weight
-                items.append((int(line[0]), int(line[1])))
+                items.append((float(line[0]), float(line[1])))
     
     return items, W
 
@@ -46,7 +52,19 @@ def write(args, selected, maximum):
         if i == len(selected) - 1:
             file.write(str(selected[i]))
         else:
-            file.write(str(selected[i]) + "\n")
+            file.write(str(selected[i]) + ", ")
+
+def write_trace(args, trace):
+    # create output file in output/solution_trace
+    if args.algorithm != "Approx":
+        first = args.instance.find("/") + 1
+        if first < 0:
+            first = 0
+        file = open("./output/solution_trace/" + args.instance[first:] + "_" + args.algorithm + "_" + str(args.time) + "_" + str(args.seed) + ".trace", "w")
+    
+    # write quality (maximum value), then the items selected
+    for time, val in trace:
+        file.write(str(time) + ", " + str(val) + "\n")
     
 def BnB(items, W, startTime, cutoffTime):
     return None, None
@@ -84,7 +102,7 @@ def Approx(items, W, startTime, cutoffTime):
             i += 1
     
     # If every item is in the knapsack, simply return
-    if i == len(items):
+    if i >= len(items) - 1:
         return indices, v_tot_X
     else:
         v_tot_k_plus_one = L[i + 1][2]
@@ -98,8 +116,98 @@ def Approx(items, W, startTime, cutoffTime):
         else:
             return indices, v_tot_X
 
-def LS1(items, W, startTime, cutoffTime):
-    return None, None
+def LS1(items, W, startTime, cutoffTime, seed, maxRestarts = 1000000):
+    # stores the best assignment and scores over multiple restarts
+    bestAssignment = None
+    bestScore = -1
+    
+    # initialize trace
+    trace = []
+
+    # iterate though 
+    for i in range(maxRestarts):
+        # initialize current assignment with random assignment with seed = seed * i
+        currScore = -1
+        random.seed(seed * i)
+
+        # currAssignment = [random.choice([0, 1]) for _ in range(len(items))]
+
+        currAssignment = []
+        # initialize with a good approximation with output from Approx and add randomization
+        approxAssignment = Approx(items, W, startTime, cutoffTime)[0]
+        for value in approxAssignment:
+            # If the random number is less than 1/len(items), flip the value
+            if random.random() < float(1/len(items)):
+                currAssignment.append(1 - value)
+            else:
+                currAssignment.append(value)  
+
+        while True:
+            neighbors = []
+
+            # generate neighbors by adding or removing items (flipping the assignment value) 
+            for i in range(len(currAssignment)):
+                neighbor = currAssignment.copy()
+                neighbor[i] = 0 if neighbor[i] == 1 else 1
+                neighbors.append(neighbor)
+
+            # initialize our evaluation score to -1
+            evalScore = -1
+            nextAssignment = None
+
+            # evaluation each neighbor and choose the best one based on total value (with total_ weight <= W)
+            for neighbor in neighbors:
+                totalWeight = 0
+                totalValue = 0
+                # calculate total weight and value for each neighbor
+                for i in range(len(items)):
+                    totalWeight += items[i][1] * neighbor[i]
+                    totalValue += items[i][0] * neighbor[i]
+                neighborScore = -1
+                if totalWeight <= W:
+                    neighborScore = totalValue
+                # store best neighbor and corresponding score
+                if neighborScore > evalScore:
+                    nextAssignment = neighbor
+                    evalScore = neighborScore
+
+            # evaluate current assignment
+            totalWeight = 0
+            totalValue = 0
+            for i in range(len(items)):
+                totalWeight += items[i][1] * currAssignment[i]
+                totalValue += items[i][0] * currAssignment[i]
+            if totalWeight <= W:
+                currScore = totalValue
+            
+            # trace if evalScore is better than bestScore
+            if currScore >= bestScore:
+                if evalScore >= currScore:
+                    trace.append((time.time() - startTime, evalScore))
+
+            # if current assignment is better than its neighbors, you have arrived at a local optima and break
+            if evalScore <= currScore:
+                break
+            currAssignment = nextAssignment
+            # stop if cutoff time passed and return the best of bestAssignment and currAssignment
+            if (time.time() - startTime) >= cutoffTime:
+                if bestScore > currScore:
+                    return bestAssignment, bestScore, trace
+                else:
+                    return currAssignment, currScore, trace
+        # update the best score and add to trace
+        if currScore > bestScore:
+            trace.append((time.time() - startTime, currScore))
+            bestScore = currScore
+            bestAssignment = currAssignment
+        
+        # stop if cutoff time passed and return the bestAssignment
+        if (time.time() - startTime) >= cutoffTime:
+            return bestAssignment, bestScore, trace
+    return bestAssignment, bestScore, trace
+
+
+
 
 def LS2(items, W, startTime, cutoffTime):
     return None, None
@@ -152,7 +260,7 @@ def main():
     elif args.algorithm == "Approx":
         selected, maximum = Approx(items, W, start, cutoff)
     elif args.algorithm == "LS1":
-        selected, maximum = LS1(items, W, start, cutoff)
+        selected, maximum, trace = LS1(items, W, start, cutoff, args.seed)
     elif args.algorithm == "LS2":
         selected, maximum = LS2(items, W, start, cutoff)
     
@@ -166,7 +274,9 @@ def main():
     
     # call write function to write algorithm output
     try:
-        write(args, selected, int(maximum))
+        write(args, selected, float(maximum))
+        if args.algorithm == "LS1":
+            write_trace(args, trace)
     except Exception as e:
         print("Error writing solution: ", e)
         exit()
