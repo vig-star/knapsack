@@ -67,7 +67,7 @@ def write_trace(args, trace):
         file.write(str(time) + ", " + str(val) + "\n")
     
 def BnB(items, W, startTime, cutoffTime):
-    return None, None
+    return None, None, None
 
 def Approx(items, W, startTime, cutoffTime):
     # L holds (heuristic ratio, index, value, and weight), note every item is identified by its index in items
@@ -127,13 +127,13 @@ def LS1(items, W, startTime, cutoffTime, seed, maxRestarts = 1000000):
     # iterate though 
     for i in range(maxRestarts):
         # initialize current assignment with random assignment with seed = seed * i
-        currScore = -1
         random.seed(seed * i)
 
         # currAssignment = [random.choice([0, 1]) for _ in range(len(items))]
 
-        currAssignment = []
         # initialize with a good approximation with output from Approx and add randomization
+        currScore = -1
+        currAssignment = []
         approxAssignment = Approx(items, W, startTime, cutoffTime)[0]
         for value in approxAssignment:
             # If the random number is less than 1/len(items), flip the value
@@ -155,7 +155,7 @@ def LS1(items, W, startTime, cutoffTime, seed, maxRestarts = 1000000):
             evalScore = -1
             nextAssignment = None
 
-            # evaluation each neighbor and choose the best one based on total value (with total_ weight <= W)
+            # evaluate each neighbor and choose the best one based on total value (with total_ weight <= W)
             for neighbor in neighbors:
                 totalWeight = 0
                 totalValue = 0
@@ -182,7 +182,7 @@ def LS1(items, W, startTime, cutoffTime, seed, maxRestarts = 1000000):
             
             # trace if evalScore is better than bestScore
             if currScore >= bestScore:
-                if evalScore >= currScore:
+                if evalScore > currScore:
                     trace.append((time.time() - startTime, evalScore))
 
             # if current assignment is better than its neighbors, you have arrived at a local optima and break
@@ -197,7 +197,8 @@ def LS1(items, W, startTime, cutoffTime, seed, maxRestarts = 1000000):
                     return currAssignment, currScore, trace
         # update the best score and add to trace
         if currScore > bestScore:
-            trace.append((time.time() - startTime, currScore))
+            if trace[-1][1] < currScore:
+                trace.append((time.time() - startTime, currScore))
             bestScore = currScore
             bestAssignment = currAssignment
         
@@ -209,8 +210,106 @@ def LS1(items, W, startTime, cutoffTime, seed, maxRestarts = 1000000):
 
 
 
-def LS2(items, W, startTime, cutoffTime):
-    return None, None
+def LS2(items, W, startTime, cutoffTime, seed, maxRestarts = 1000000, p=0.3):
+    # stores the best assignment and scores over multiple restarts
+    bestAssignment = None
+    bestScore = -1
+    
+    # initialize trace
+    trace = []
+
+    # iterate though 
+    for i in range(maxRestarts):
+        # initialize current assignment with random assignment with seed = seed * i
+        random.seed(seed * i)
+
+        # currAssignment = [random.choice([0, 1]) for _ in range(len(items))]
+
+        # initialize with a good approximation with output from Approx and add randomization
+        currScore = -1
+        currAssignment = []
+        approxAssignment = Approx(items, W, startTime, cutoffTime)[0]
+        for value in approxAssignment:
+            # If the random number is less than 1/len(items), flip the value
+            if random.random() < float(1/len(items)):
+                currAssignment.append(1 - value)
+            else:
+                currAssignment.append(value)  
+
+        while True:
+            neighbors = []
+
+            # generate neighbors by adding or removing items (flipping the assignment value) 
+            for i in range(len(currAssignment)):
+                neighbor = currAssignment.copy()
+                neighbor[i] = 0 if neighbor[i] == 1 else 1
+                neighbors.append(neighbor)
+            
+            # generate neighbors by swapping items in and out of the knapsack 
+            for i in range(len(currAssignment)):
+                for j in range(len(currAssignment)):
+                    if currAssignment[i] == 1 and currAssignment[j] == 0:
+                        neighbor = currAssignment.copy()
+                        neighbor[i] = 0
+                        neighbor[j] = 1
+                        neighbors.append(neighbor)
+            # initialize our evaluation score to -1
+            evalScore = -1
+            nextAssignment = None
+
+            # evaluate each neighbor, with probability p, don't update next assignment to better scoring neighbor 
+            for n, neighbor in enumerate(neighbors):
+                totalWeight = 0
+                totalValue = 0
+                # calculate total weight and value for each neighbor
+                for i in range(len(items)):
+                    totalWeight += items[i][1] * neighbor[i]
+                    totalValue += items[i][0] * neighbor[i]
+                neighborScore = -1
+                if totalWeight <= W:
+                    neighborScore = totalValue
+                # update next assignment with better neighbor if above p
+                random.seed(seed + n)
+                if neighborScore > evalScore and random.random() > p:
+                    nextAssignment = neighbor
+                    evalScore = neighborScore
+
+            # evaluate current assignment
+            totalWeight = 0
+            totalValue = 0
+            for i in range(len(items)):
+                totalWeight += items[i][1] * currAssignment[i]
+                totalValue += items[i][0] * currAssignment[i]
+            if totalWeight <= W:
+                currScore = totalValue
+            
+            # trace if evalScore is better than bestScore
+            if currScore >= bestScore:
+                if evalScore > currScore:
+                    trace.append((time.time() - startTime, evalScore))
+
+            # if current assignment is better than its neighbors, you have arrived at a local optima and break
+            if evalScore <= currScore:
+                break
+            currAssignment = nextAssignment
+            # stop if cutoff time passed and return the best of bestAssignment and currAssignment
+            if (time.time() - startTime) >= cutoffTime:
+                if bestScore > currScore:
+                    return bestAssignment, bestScore, trace
+                else:
+                    return currAssignment, currScore, trace
+        # update the best score and add to trace
+        if currScore > bestScore:
+            if trace[-1][1] < currScore:
+                trace.append((time.time() - startTime, currScore))
+            bestScore = currScore
+            bestAssignment = currAssignment
+        
+        # stop if cutoff time passed and return the bestAssignment
+        if (time.time() - startTime) >= cutoffTime:
+            return bestAssignment, bestScore, trace
+    return bestAssignment, bestScore, trace
+
 
 def main():
     # parse arguments
@@ -256,13 +355,13 @@ def main():
 
     # call algorithms based on input and pass items, W, start and cutoff
     if args.algorithm == "BnB":
-        selected, maximum = BnB(items, W, start, cutoff)
+        selected, maximum, trace = BnB(items, W, start, cutoff)
     elif args.algorithm == "Approx":
         selected, maximum = Approx(items, W, start, cutoff)
     elif args.algorithm == "LS1":
         selected, maximum, trace = LS1(items, W, start, cutoff, args.seed)
     elif args.algorithm == "LS2":
-        selected, maximum = LS2(items, W, start, cutoff)
+        selected, maximum, trace = LS2(items, W, start, cutoff, args.seed)
     
     # calculate total time for algorithm to end
     end = time.time()
@@ -275,7 +374,7 @@ def main():
     # call write function to write algorithm output
     try:
         write(args, selected, float(maximum))
-        if args.algorithm == "LS1":
+        if args.algorithm != "Approx" and trace:
             write_trace(args, trace)
     except Exception as e:
         print("Error writing solution: ", e)
