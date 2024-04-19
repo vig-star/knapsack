@@ -52,34 +52,45 @@ def BnB(items, W, startTime, cutoffTime):
     return None, None
 
 def Approx(items, W, startTime, cutoffTime):
+    # L holds (heuristic ratio, index, value, and weight), note every item is identified by its index in items
+    # The heuristic ratio is the quantity v_i / w_i for every item
     L = [None for i in range(len(items))]
 
+    # Calculate heuristic ratio v_i / w_i, value per unit pound
     for i in range(len(items)):
         L[i] = (float(items[i][0]) / float(items[i][1]), i, items[i][0], items[i][1])
     
+    # We sort the items by their heuristic in descending order
     L = sorted(L, key=lambda x : x[0], reverse=True)
 
+    # Indices tracks whether the item identify by index i in 'items' is included in the knapsack or not
     indices = [0 for i in range(len(items))]
     total_weight = 0.0
     v_tot_X = 0.0
     i = 0
+    # Continue adding items in order of decreasing heuristic ratio until adding another item exceeds W
     while i < len(items) and total_weight <= W:
+        # stop if cutoff time passed
+        if (time.time() - startTime) >= cutoffTime:
+            break
+
         if total_weight + L[i][3] > W:
             break
         else:
+            # Keep track of the running weight total and value total (total_weight and v_tot_X respectively)
             indices[L[i][1]] = 1
             total_weight += L[i][3]
             v_tot_X += L[i][2]
             i += 1
-        # stop if cutoff time passed
-        if (time.time() - startTime) >= cutoffTime:
-            break
     
+    # If every item is in the knapsack, simply return
     if i == len(items):
         return indices, v_tot_X
     else:
         v_tot_k_plus_one = L[i + 1][2]
 
+        # If including simply the next item provides higher value than the current solution, we do that instead
+        # This guarentees the approximation is within 1/2 of the optimal solution
         if v_tot_k_plus_one > v_tot_X:
             indices = [0 for i in range(len(items))]
             indices[L[i + 1][1]] = 1
