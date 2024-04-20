@@ -197,7 +197,9 @@ def LS1(items, W, startTime, cutoffTime, seed, maxRestarts = 1000000):
                     return currAssignment, currScore, trace
         # update the best score and add to trace
         if currScore > bestScore:
-            if trace[-1][1] < currScore:
+            if len(trace) == 0:
+                trace.append((time.time() - startTime, currScore))
+            if len(trace) >= 1 and trace[-1][1] < currScore:
                 trace.append((time.time() - startTime, currScore))
             bestScore = currScore
             bestAssignment = currAssignment
@@ -244,15 +246,16 @@ def LS2(items, W, startTime, cutoffTime, seed, maxRestarts = 1000000, p=0.3):
                 neighbor = currAssignment.copy()
                 neighbor[i] = 0 if neighbor[i] == 1 else 1
                 neighbors.append(neighbor)
-            
-            # generate neighbors by swapping items in and out of the knapsack 
-            for i in range(len(currAssignment)):
-                for j in range(len(currAssignment)):
-                    if currAssignment[i] == 1 and currAssignment[j] == 0:
-                        neighbor = currAssignment.copy()
-                        neighbor[i] = 0
-                        neighbor[j] = 1
-                        neighbors.append(neighbor)
+            # due to timeout concerns with exceptionally large >5000-10000 items, we will not swap
+            if len(items) < 5000:
+                # generate neighbors by swapping items in and out of the knapsack 
+                for i in range(len(currAssignment)):
+                    for j in range(len(currAssignment)):
+                        if currAssignment[i] == 1 and currAssignment[j] == 0:
+                            neighbor = currAssignment.copy()
+                            neighbor[i] = 0
+                            neighbor[j] = 1
+                            neighbors.append(neighbor)
             # initialize our evaluation score to -1
             evalScore = -1
             nextAssignment = None
@@ -300,7 +303,9 @@ def LS2(items, W, startTime, cutoffTime, seed, maxRestarts = 1000000, p=0.3):
                     return currAssignment, currScore, trace
         # update the best score and add to trace
         if currScore > bestScore:
-            if trace[-1][1] < currScore:
+            if len(trace) == 0:
+                trace.append((time.time() - startTime, currScore))
+            if len(trace) >= 1 and trace[-1][1] < currScore:
                 trace.append((time.time() - startTime, currScore))
             bestScore = currScore
             bestAssignment = currAssignment
@@ -374,7 +379,7 @@ def main():
     # call write function to write algorithm output
     try:
         write(args, selected, float(maximum))
-        if args.algorithm != "Approx" and trace:
+        if args.algorithm != "Approx":
             write_trace(args, trace)
     except Exception as e:
         print("Error writing solution: ", e)
