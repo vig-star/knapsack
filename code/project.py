@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 '''
 This file consists of all the code and is the executable file. 
 It takes in the command line input and calls the implemented functions as desired based on the parameters.
@@ -35,16 +37,15 @@ def read(filepath):
 def write(args, selected, maximum):
     # create output file in output/solution for deterministic algorithms like BnB/Approx 
     if args.algorithm == "Approx" or args.algorithm == "BnB":
-        first = args.instance.rfind("/") + 1
+        first = args.instance.find("/") + 1
         if first < 0:
             first = 0
         file = open("../output/solution/" + args.instance[first:] + "_" + args.algorithm + "_" + str(args.time) + ".sol", "w")
-    # create output file in output/solution for non-deterministic algorithms LS1/LS2   
+    # create output file in output/solution for non-deterministic algorithms like BnB/Approx   
     else:
-        first = args.instance.rfind("/") + 1
+        first = args.instance.find("/") + 1
         if first < 0:
             first = 0
-        print(args.instance[first:])
         file = open("../output/solution/" + args.instance[first:] + "_" + args.algorithm + "_" + str(args.time) + "_" + str(args.seed) + ".sol", "w")
     
     # write quality (maximum value), then the items selected
@@ -58,10 +59,10 @@ def write(args, selected, maximum):
 def write_trace(args, trace):
     # create output file in output/solution_trace
     if args.algorithm != "Approx":
-        first = args.instance.rfind("/") + 1
+        first = args.instance.find("/") + 1
         if first < 0:
             first = 0
-        file = open("../output/solution_trace/" + args.instance[first:] + "_" + args.algorithm + "_" + str(args.time) + "_" + str(args.seed) + ".trace", "w")
+        file = open("./output/solution_trace/" + args.instance[first:] + "_" + args.algorithm + "_" + str(args.time) + "_" + str(args.seed) + ".trace", "w")
     
     # write quality (maximum value), then the items selected
     for time, val in trace:
