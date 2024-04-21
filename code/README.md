@@ -26,6 +26,6 @@ The random seed has to be some integer number. With the same random seed, the ou
 
 ```
 python project.py -inst large_scale/large_15 -alg LS1 -time 30 -seed 32
-python project.py -inst small_scale/small_3 -alg LS1 -time 10 -seed 32
-python project.py -inst test/KP_s_06 -alg LS1 -time 5 -seed 32
+python project.py -inst small_scale/small_3 -alg BnB -time 50 -seed 64
+python project.py -inst test/KP_s_06 -alg Approx -time 5 -seed 16
 ```
