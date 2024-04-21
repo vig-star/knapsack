@@ -45,7 +45,6 @@ def write(args, selected, maximum):
     # create output file in output/solution for non-deterministic algorithms like BnB/Approx   
     else:
         first = args.instance.rfind("/") + 1
-        print(args.instance[first:])
         if first < 0:
             first = 0
         file = open("../output/solution/" + args.instance[first:] + "_" + args.algorithm + "_" + str(args.time) + "_" + str(args.seed) + ".sol", "w")
