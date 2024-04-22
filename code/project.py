@@ -9,6 +9,7 @@ Written by Vignesh Sreedhar, Sai Manchikalapati, and Pranav Sreedhar.
 import argparse
 import time
 import random
+from queue import PriorityQueue
 
 # add argument parser
 parser = argparse.ArgumentParser()
@@ -16,6 +17,7 @@ parser.add_argument("-inst", "--instance", help="Instance File", dest="instance"
 parser.add_argument("-alg", "--algorithm", help="[BnB|Approx|LS1|LS2]", dest="algorithm")
 parser.add_argument("-time", "--time", help="Cutoff Time (seconds)", dest="time", type=float)
 parser.add_argument("-seed", "--seed", help="Random Seed", dest="seed", type=int)
+
 
 def read(filepath):
     W = None
@@ -60,18 +62,104 @@ def write(args, selected, maximum):
 
 def write_trace(args, trace):
     # create output file in output/solution_trace
-    if args.algorithm != "Approx":
+    if args.algorithm != "Approx" and args.algorithm != "BnB":
         first = args.instance.rfind("/") + 1
         if first < 0:
             first = 0
         file = open("../output/solution_trace/" + args.instance[first:] + "_" + args.algorithm + "_" + str(args.time) + "_" + str(args.seed) + ".trace", "w")
-    
+    elif args.algorithm == "BnB":
+        first = args.instance.rfind("/") + 1
+        if first < 0:
+            first = 0
+        file = open("../output/solution_trace/" + args.instance[first:] + "_" + args.algorithm + "_" + str(args.time) + ".trace", "w")
+
     # write quality (maximum value), then the items selected
     for time, val in trace:
         file.write(str(time) + ", " + str(val) + "\n")
+
+def BnB_bound(items, W, node):
+    if node.weight >= W:
+        return 0
     
+    bound = node.value
+    level = node.level + 1
+    weight = node.weight
+ 
+    while level < len(items) and items[level][1] + weight <= W:
+        bound += items[level][0]
+        weight += items[level][1]
+        level += 1
+ 
+    if level < len(items):
+        bound += int((W - weight) * items[level][0] / items[level][1])
+    return bound
+
 def BnB(items, W, startTime, cutoffTime):
-    return None, None, None
+    class Node:
+        def __init__(self, level, value, weight, selected_items=None, bound=0):
+            self.level = level
+            self.value = value
+            self.weight = weight
+            self.selected_items = selected_items if selected_items else []
+            self.bound = bound
+        
+        def __lt__(self, other):
+            # # Compare based on bound in descending order
+            # if self.weight != 0 and other.weight !=0:
+            #     return (other.value / other.weight) > (self.value / self.weight)
+            return other.bound - self.bound
+
+    # Sort items by value-to-weight ratio (v_i / w_i) in descending order
+    trace = list()
+    temp = items.copy()
+    temp.sort(key=lambda x: x[0] / x[1], reverse=True)
+    pq = PriorityQueue()
+    pq.put(Node(-1, 0, 0, []))  # Start with the root node (level=-1, value=0, weight=0)
+    max_val = 0
+    best_selected_items = []
+
+    while not pq.empty():
+        # Check if time limit has been exceeded
+        if (time.time() - startTime) >= cutoffTime:
+            break
+        
+        node = pq.get()
+        level = node.level + 1
+
+        if level >= len(items):
+            continue
+
+        # Include the next item at the current level
+        new_weight = node.weight + temp[level][1]
+        new_value = node.value + temp[level][0]
+        new_selected_items = node.selected_items + [level]
+
+        if new_weight <= W and new_value > max_val:
+            max_val = new_value
+            trace.append((time.time() - startTime, max_val))
+            best_selected_items = new_selected_items
+
+        new_node = Node(level, new_value, new_weight, new_selected_items, 0)
+        bound = BnB_bound(temp, W, new_node)
+        new_node.bound = bound
+        if bound > max_val:
+            pq.put(new_node)
+
+        # Explore without including the current item
+        new_node = Node(level, node.value, node.weight, node.selected_items, 0)
+        bound = BnB_bound(temp, W, new_node)
+        new_node.bound = bound
+        if bound > max_val:
+            pq.put(new_node)
+
+    # Prepare the list of selected items based on indices
+    selected_items = [0] * len(items)
+    for idx in best_selected_items:
+        selected_items[items.index(temp[idx])] = 1
+
+    return selected_items, max_val, trace
+
+
 
 def Approx(items, W, startTime, cutoffTime):
     # L holds (heuristic ratio, index, value, and weight), note every item is identified by its index in items
@@ -323,7 +411,7 @@ def LS2(items, W, startTime, cutoffTime, seed, maxRestarts = 1000000, p=0.3):
 def main():
     # parse arguments
     args = parser.parse_args()
-
+    print(args)
     # error handle arguments to ensure all required arguments are passed in and valid
     if args.algorithm is None:
         print("Enter a valid algorithm")
