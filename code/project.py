@@ -84,13 +84,13 @@ def BnB_bound(items, W, node):
     level = node.level + 1
     weight = node.weight
  
-    while level < len(items) and items[level][1] + weight <= W:
-        bound += items[level][0]
-        weight += items[level][1]
+    while level < len(items) and items[level][2] + weight <= W:
+        bound += items[level][1]
+        weight += items[level][2]
         level += 1
  
     if level < len(items):
-        bound += int((W - weight) * items[level][0] / items[level][1])
+        bound += int((W - weight) * items[level][1] / items[level][2])
     return bound
 
 
@@ -109,11 +109,15 @@ def BnB(items, W, startTime, cutoffTime):
 
     # Sort items by value-to-weight ratio (v_i / w_i) in descending order
     trace = list()
-    temp = items.copy()
-    temp.sort(key=lambda x: x[0] / x[1], reverse=True)
+    temp = [None for i in range(len(items))]
+    for i in range(len(items)):
+        temp[i] = (i, items[i][0], items[i][1]) #keep track of the index before sorting
+    temp.sort(key=lambda x: x[1] / x[2], reverse=True)
     pq = PriorityQueue()
     pq.put(Node(-1, 0, 0, []))  # Start with the root node (level=-1, value=0, weight=0)
-    _, max_val = Approx(temp, W, startTime=startTime, cutoffTime=cutoffTime) # Set the initial upper bound to the value we get from Approx
+    a_selected_items, a_max_val = Approx(items, W, startTime=startTime, cutoffTime=cutoffTime) # Set the initial upper bound to the value we get from Approx
+    max_val = a_max_val
+    trace.append((time.time() - startTime, max_val))
     best_selected_items = []
 
     while not pq.empty():
@@ -128,8 +132,8 @@ def BnB(items, W, startTime, cutoffTime):
             continue
 
         # Include the next item at the current level
-        new_weight = node.weight + temp[level][1]
-        new_value = node.value + temp[level][0]
+        new_weight = node.weight + temp[level][2]
+        new_value = node.value + temp[level][1]
         new_selected_items = node.selected_items + [level]
 
         if new_weight <= W and new_value > max_val:
@@ -151,9 +155,13 @@ def BnB(items, W, startTime, cutoffTime):
             pq.put(new_node)
 
     # Prepare the list of selected items based on indices
-    selected_items = [0] * len(items)
-    for idx in best_selected_items:
-        selected_items[items.index(temp[idx])] = 1
+    
+    if max_val == a_max_val:
+        selected_items = a_selected_items
+    else:
+        selected_items = [0] * len(items)
+        for idx in best_selected_items:
+            selected_items[temp[idx][0]] = 1
 
     return selected_items, max_val, trace
 
@@ -170,7 +178,6 @@ def Approx(items, W, startTime, cutoffTime):
     
     # We sort the items by their heuristic in descending order
     L = sorted(L, key=lambda x : x[0], reverse=True)
-
     # Indices tracks whether the item identify by index i in 'items' is included in the knapsack or not
     indices = [0 for i in range(len(items))]
     total_weight = 0.0
@@ -409,7 +416,6 @@ def LS2(items, W, startTime, cutoffTime, seed, maxRestarts = 1000000, p=0.3):
 def main():
     # parse arguments
     args = parser.parse_args()
-    print(args)
     # error handle arguments to ensure all required arguments are passed in and valid
     if args.algorithm is None:
         print("Enter a valid algorithm")
