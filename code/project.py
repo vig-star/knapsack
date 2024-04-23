@@ -47,7 +47,6 @@ def write(args, selected, maximum):
     # create output file in output/solution for non-deterministic algorithms like BnB/Approx   
     else:
         first = args.instance.rfind("/") + 1
-        print(args.instance[first:])
         if first < 0:
             first = 0
         file = open("../output/solution/" + args.instance[first:] + "_" + args.algorithm + "_" + str(args.time) + "_" + str(args.seed) + ".sol", "w")
@@ -94,6 +93,7 @@ def BnB_bound(items, W, node):
         bound += int((W - weight) * items[level][0] / items[level][1])
     return bound
 
+
 def BnB(items, W, startTime, cutoffTime):
     class Node:
         def __init__(self, level, value, weight, selected_items=None, bound=0):
@@ -105,8 +105,6 @@ def BnB(items, W, startTime, cutoffTime):
         
         def __lt__(self, other):
             # # Compare based on bound in descending order
-            # if self.weight != 0 and other.weight !=0:
-            #     return (other.value / other.weight) > (self.value / self.weight)
             return other.bound - self.bound
 
     # Sort items by value-to-weight ratio (v_i / w_i) in descending order
@@ -115,7 +113,7 @@ def BnB(items, W, startTime, cutoffTime):
     temp.sort(key=lambda x: x[0] / x[1], reverse=True)
     pq = PriorityQueue()
     pq.put(Node(-1, 0, 0, []))  # Start with the root node (level=-1, value=0, weight=0)
-    max_val = 0
+    _, max_val = Approx(temp, W, startTime=startTime, cutoffTime=cutoffTime) # Set the initial upper bound to the value we get from Approx
     best_selected_items = []
 
     while not pq.empty():
