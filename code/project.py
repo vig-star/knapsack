@@ -77,24 +77,28 @@ def write_trace(args, trace):
         file.write(str(time) + ", " + str(val) + "\n")
 
 def BnB_bound(items, W, node):
+    # upper bound of profit for a node in the search tree
     if node.weight >= W:
         return 0
     
     bound = node.value
     level = node.level + 1
     weight = node.weight
- 
+    
+    # Greedily add items to the knapsack until the weight limit is reached
     while level < len(items) and items[level][2] + weight <= W:
         bound += items[level][1]
         weight += items[level][2]
         level += 1
  
+    # Add the fractional contribution of the next item with the best ratio
     if level < len(items):
         bound += int((W - weight) * items[level][1] / items[level][2])
     return bound
 
 
 def BnB(items, W, startTime, cutoffTime):
+    # Initialize Node Class
     class Node:
         def __init__(self, level, value, weight, selected_items=None, bound=0):
             self.level = level
@@ -104,23 +108,23 @@ def BnB(items, W, startTime, cutoffTime):
             self.bound = bound
         
         def __lt__(self, other):
-            # # Compare based on bound in descending order
+            # Compare based on bound in descending order
             return other.bound - self.bound
 
     # Sort items by value-to-weight ratio (v_i / w_i) in descending order
     trace = list()
     temp = [None for i in range(len(items))]
     for i in range(len(items)):
-        temp[i] = (i, items[i][0], items[i][1]) #keep track of the index before sorting
+        temp[i] = (i, items[i][0], items[i][1]) # keep track of the index before sorting
     temp.sort(key=lambda x: x[1] / x[2], reverse=True)
     pq = PriorityQueue()
     pq.put(Node(-1, 0, 0, []))  # Start with the root node (level=-1, value=0, weight=0)
     a_selected_items, a_max_val = Approx(items, W, startTime=startTime, cutoffTime=cutoffTime) # Set the initial upper bound to the value we get from Approx
-    max_val = a_max_val
-    trace.append((time.time() - startTime, max_val))
+    max_val = a_max_val # set the initial max value to the value from the approximation approach
+    trace.append((time.time() - startTime, max_val)) # append the trace
     best_selected_items = []
 
-    while not pq.empty():
+    while not pq.empty(): # keep it going until the PQ is empty
         # Check if time limit has been exceeded
         if (time.time() - startTime) >= cutoffTime:
             break
@@ -136,11 +140,13 @@ def BnB(items, W, startTime, cutoffTime):
         new_value = node.value + temp[level][1]
         new_selected_items = node.selected_items + [level]
 
+        # If the new value is greater than the current maximum value then update the maximum value
         if new_weight <= W and new_value > max_val:
             max_val = new_value
             trace.append((time.time() - startTime, max_val))
             best_selected_items = new_selected_items
 
+        # Node including the new item
         new_node = Node(level, new_value, new_weight, new_selected_items, 0)
         bound = BnB_bound(temp, W, new_node)
         new_node.bound = bound
@@ -155,7 +161,6 @@ def BnB(items, W, startTime, cutoffTime):
             pq.put(new_node)
 
     # Prepare the list of selected items based on indices
-    
     if max_val == a_max_val:
         selected_items = a_selected_items
     else:
@@ -468,7 +473,7 @@ def main():
     end = time.time()
     
     # print outputs and execution time before writing output file
-    print(selected)
+    # print(selected)
     print(maximum)
     print("Execution Time (seconds): " + str(end - start))
     
