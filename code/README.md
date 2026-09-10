@@ -1,28 +1,24 @@
-# Knapsack Problem
+# Running the knapsack solver
 
-## Platform Description
+Read the [project README](../README.md) for the problem description, algorithm comparison, dataset and output formats, and current correctness limitations.
 
-All the algorithms were performed on two MacBook Airs with the Apple M1 and M2 chips respectively. The number of cores for both machines was 8 (4 performance and 4 efficiency) with 8 GB of RAM. The language used to write these algorithms was Python 3.11 and Anaconda 3 was the Python distribution used.
+## Quick start
 
-## Running the code
+Run these commands **from this `code/` directory**. The program writes to `../output/solution/` and `../output/solution_trace/`, relative to the current working directory.
 
+```bash
+python3 project.py -inst ../DATA/DATASET/test/KP_s_01 -alg BnB -time 1
+python3 project.py -inst ../DATA/DATASET/test/KP_s_01 -alg Approx -time 1
+python3 project.py -inst ../DATA/DATASET/test/KP_s_01 -alg LS1 -time 1 -seed 32
+python3 project.py -inst ../DATA/DATASET/test/KP_s_01 -alg LS2 -time 1 -seed 32
 ```
-python project.py -inst <DATASET_INSTANCE> -alg <ALGORITHM> -time <CUTOFF_TIME> -seed <RANDOM_SEED>
-```
 
-The dataset instance is a path to a dataset instance. For example, `../DATA/DATASET/small_scale/small_10` would be the path to the tenth small-scale dataset if the `DATA` folder from Canvas was in the root directory (parent folder of `code`).
+Python 3 is required; there are no third-party dependencies. All datasets and output directories are included in the repository.
 
-The algorithm has to be either "BnB", "Approx", "LS1", or "LS2" for Branch and Bound, Approximation, Local Search 1, and Local Search 2 respectively.
+Choose `BnB`, `Approx`, `LS1`, or `LS2` with `-alg`. Supply an input path with `-inst` and a positive time budget in seconds with `-time`. Local search (`LS1` and `LS2`) also requires a nonzero integer `-seed`. A seed controls random choices, but time-based stopping means identical results across runs are not guaranteed.
 
-The cutoff time has to be some (decimal) number. This is especially relevant for local search algorithms and BnB.
+Use `python3 project.py --help` for the available flags. Repeating a command overwrites its matching output files.
 
-The random seed has to be some integer number. With the same random seed, the outputs should be reproducible. This is only required for local search algorithms.
+## Original platform
 
-## Example code inputs
-
-```
-python project.py -inst ../DATA/DATASET/large_scale/large_15 -alg LS1 -time 30 -seed 32
-python project.py -inst ../DATA/DATASET/large_scale/large_1 -alg LS2 -time 30 -seed 45
-python project.py -inst ../DATA/DATASET/small_scale/small_3 -alg BnB -time 50
-python project.py -inst ../DATA/DATASET/test/KP_s_06 -alg Approx -time 5
-```
+The original experiments used Python 3.11 with Anaconda 3 on two MacBook Air machines, with Apple M1 and M2 chips respectively. Both machines had 8 CPU cores (4 performance and 4 efficiency) and 8 GB RAM. Anaconda is not required to run the code.
